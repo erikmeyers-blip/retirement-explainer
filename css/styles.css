@@ -1,0 +1,840 @@
+/* ==========================================================================
+   Financial Literacy Simulator
+   Palette is the validated data-viz reference instance: categorical slots run
+   in fixed order, and the headline chart uses emphasis form (one accent hue +
+   a de-emphasis gray) because the story is a single series.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  --surface-1:        #fcfcfb;
+  --surface-page:     #f9f9f7;
+  --surface-sunken:   #f2f1ed;
+
+  --text-primary:     #0b0b0b;
+  --text-secondary:   #52514e;
+  --text-muted:       #898781;
+
+  --gridline:         #e1e0d9;
+  --axis:             #c3c2b7;
+  --border:           rgba(11, 11, 11, 0.10);
+  --border-strong:    rgba(11, 11, 11, 0.18);
+
+  /* Headline chart — emphasis form */
+  --series-start:     #2a78d6;
+  --series-wait:      #8d8a82;
+
+  /* Waterfall — categorical slots 1-6, in fixed order */
+  --series-1:         #2a78d6;   /* Roth IRA   */
+  --series-2:         #eb6834;   /* savings    */
+  --series-3:         #1baf7a;   /* housing    */
+  --series-4:         #eda100;   /* groceries  */
+  --series-5:         #e87ba4;   /* charity    */
+  --series-6:         #008300;   /* fun money  */
+  --wf-anchor:        #6b6862;   /* gross / net anchors */
+  --wf-tax:           #8d8a82;   /* the three taxes     */
+
+  --status-critical:  #d03b3b;
+  --success-text:     #006300;
+
+  /* Slider thumb size. Everything that has to line up with the thumb — the
+     recommendation tick, the track offset — derives from this one value, so
+     growing it for touch can't knock the marker out of alignment. */
+  --thumb:            18px;
+  --track:            5px;
+
+  --radius:           14px;
+  --radius-sm:        9px;
+  --shadow:           0 1px 2px rgba(11, 11, 11, 0.04), 0 4px 16px rgba(11, 11, 11, 0.04);
+
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+
+    --surface-1:      #1a1a19;
+    --surface-page:   #0d0d0d;
+    --surface-sunken: #232322;
+
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+
+    --gridline:       #2c2c2a;
+    --axis:           #383835;
+    --border:         rgba(255, 255, 255, 0.10);
+    --border-strong:  rgba(255, 255, 255, 0.18);
+
+    --series-start:   #3987e5;
+    --series-wait:    #6f6d66;
+
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --series-4:       #c98500;
+    --series-5:       #d55181;
+    --series-6:       #008300;
+    --wf-anchor:      #9c9a92;
+    --wf-tax:         #6f6d66;
+
+    --status-critical: #d03b3b;
+    --success-text:    #0ca30c;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Any class that sets `display` outranks the UA rule for [hidden], which
+   silently un-hides elements toggled from JS. Make [hidden] win, always. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  z-index: 100;
+}
+.skip-link:focus { left: 16px; }
+
+:where(button, input, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--series-start);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------- header -- */
+
+.page-header {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 44px 24px 28px;
+  text-align: center;
+}
+
+.page-header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.5rem, 3.2vw, 2.05rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+.lede {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.1rem);
+  color: var(--text-secondary);
+}
+.lede strong { color: var(--text-primary); font-weight: 620; }
+
+/* ---------------------------------------------------------------- layout -- */
+
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 920px) {
+  .layout { grid-template-columns: minmax(330px, 380px) 1fr; gap: 24px; }
+}
+
+.controls, .results { display: grid; gap: 20px; min-width: 0; }
+
+/* ----------------------------------------------------------------- cards -- */
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+}
+
+.card-sub {
+  margin: 0 0 18px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+  font-weight: 620;
+}
+
+.step-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--series-start);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- presets -- */
+
+.preset-grid { display: grid; gap: 10px; }
+@media (min-width: 460px) and (max-width: 919px) {
+  .preset-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.preset {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.preset:hover { border-color: var(--series-start); }
+.preset[aria-pressed="true"] {
+  border-color: var(--series-start);
+  background: color-mix(in srgb, var(--series-start) 8%, var(--surface-1));
+}
+.preset-title { font-weight: 620; font-size: 0.95rem; }
+.preset-hint { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* ---------------------------------------------------------------- fields -- */
+
+.field { margin-bottom: 20px; }
+.field:last-child { margin-bottom: 0; }
+
+.field-feature {
+  padding: 16px;
+  margin: 0 -4px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.field-head label {
+  font-size: 0.9rem;
+  font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.field-note { color: var(--text-muted); font-weight: 400; font-size: 0.82rem; }
+
+.field-value {
+  font-size: 0.88rem;
+  font-weight: 620;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+  display: inline-block;
+}
+
+.field-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.rec { font-size: 0.78rem; color: var(--text-muted); }
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--series-start);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- slider -- */
+
+.slider-wrap { position: relative; }
+
+/* The recommended-value tick. --marker is a 0-1 fraction of the track. The
+   thumb's centre travels from thumb/2 to (100% - thumb/2), so the tick has to
+   use that same inset or it drifts out of true at the ends. */
+.slider-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(var(--thumb) / 2 + var(--marker, 0) * (100% - var(--thumb)));
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  transform: translateY(-50%);
+  background: var(--text-muted);
+  border-radius: 1px;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.tick-key {
+  display: inline-block;
+  width: 2px;
+  height: 11px;
+  background: var(--text-muted);
+  border-radius: 1px;
+  vertical-align: -1px;
+  margin: 0 2px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: calc(var(--thumb) + 12px);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+  touch-action: pan-y;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--track);
+  border-radius: 3px;
+  background: var(--gridline);
+}
+input[type="range"]::-moz-range-track {
+  height: var(--track);
+  border-radius: 3px;
+  background: var(--gridline);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((var(--track) - var(--thumb)) / 2);
+  border-radius: 50%;
+  background: var(--series-start);
+  border: 2px solid var(--surface-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+input[type="range"]::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 50%;
+  background: var(--series-start);
+  border: 2px solid var(--surface-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* ------------------------------------------------------------------ touch -- */
+
+/* Phones are the main way this gets used, so grow every target that a thumb
+   has to land on. Keyed off pointer type rather than width: a small laptop
+   window should keep the precise mouse-sized controls. */
+@media (pointer: coarse) {
+  :root { --thumb: 28px; }
+
+  .preset { padding: 16px; }
+
+  .link-btn {
+    padding: 10px 2px;
+    margin: -10px 0;
+  }
+
+  .fine-tune > summary,
+  .table-view > summary {
+    padding: 10px 0;
+  }
+
+  .flow-item { padding: 9px 0; }
+
+  .flat-input input { padding: 12px; font-size: 1rem; }
+}
+
+.flat-input {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.flat-input label { font-size: 0.82rem; color: var(--text-secondary); }
+.flat-input input {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  max-width: 160px;
+}
+.flat-input .hint { margin: 0; }
+
+/* --------------------------------------------------------------- notices -- */
+
+.callout {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+.callout strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.notice {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  background: color-mix(in srgb, var(--series-start) 10%, var(--surface-1));
+  color: var(--text-secondary);
+}
+.notice[data-tone="critical"] {
+  background: color-mix(in srgb, var(--status-critical) 12%, var(--surface-1));
+}
+.notice::before { content: "ℹ  "; font-weight: 700; }
+.notice[data-tone="critical"]::before { content: "⚠  "; color: var(--status-critical); }
+
+/* ------------------------------------------------------------ fun money -- */
+
+.fun-money {
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--border-strong);
+  text-align: center;
+}
+.fun-money.is-negative {
+  border-color: var(--status-critical);
+  border-style: solid;
+  background: color-mix(in srgb, var(--status-critical) 8%, var(--surface-1));
+}
+
+.fun-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.fun-value {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.fun-money.is-negative .fun-value { color: var(--status-critical); }
+.fun-value .per { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); }
+
+.fun-sub { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-muted); }
+
+/* ------------------------------------------------------------- fine-tune -- */
+
+.fine-tune {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.fine-tune > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: var(--text-secondary);
+  list-style: none;
+}
+.fine-tune > summary::-webkit-details-marker { display: none; }
+.fine-tune > summary::before { content: "▸ "; color: var(--text-muted); }
+.fine-tune[open] > summary::before { content: "▾ "; }
+.fine-tune > *:not(summary) { margin-top: 16px; }
+
+.reset-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.reset-btn:hover { border-color: var(--status-critical); color: var(--status-critical); }
+
+/* ------------------------------------------------------------------ hero -- */
+
+.card-hero {
+  text-align: center;
+  border-color: color-mix(in srgb, var(--series-start) 30%, var(--border));
+  background:
+    linear-gradient(to bottom,
+      color-mix(in srgb, var(--series-start) 6%, var(--surface-1)),
+      var(--surface-1) 55%);
+}
+
+.hero-figure {
+  margin: 10px 0 0;
+  font-family: var(--font);
+  font-size: clamp(2.8rem, 8.5vw, 4.6rem);
+  font-weight: 680;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  color: var(--series-start);
+  /* Proportional figures: tabular-nums makes a big number look loose. */
+}
+
+.hero-sub {
+  margin: 10px auto 0;
+  max-width: 42ch;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.stat-row {
+  display: grid;
+  gap: 10px;
+  margin: 24px 0 0;
+}
+@media (min-width: 420px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+
+.stat {
+  display: grid;
+  gap: 2px;
+  padding: 14px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+.stat-accent { background: color-mix(in srgb, var(--series-start) 12%, var(--surface-1)); }
+
+.stat-label { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35; }
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.stat-accent .stat-value { color: var(--series-start); }
+.stat-note { font-size: 0.74rem; color: var(--text-muted); }
+
+.insight {
+  margin: 22px 0 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--series-start);
+  background: var(--surface-sunken);
+  text-align: left;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+.insight strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- charts -- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 14px 0 10px;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.legend-swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+.chart { position: relative; width: 100%; margin-top: 6px; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+
+.chart-tick { font-size: 11px; font-family: var(--font); font-variant-numeric: tabular-nums; }
+.chart-value { font-size: 12px; font-weight: 620; font-family: var(--font); }
+.chart-axis-title { font-size: 11px; font-family: var(--font); }
+.wf-label { font-size: 12.5px; font-family: var(--font); }
+.wf-value {
+  font-size: 12.5px;
+  font-weight: 620;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-hit { cursor: default; }
+.chart-hit:focus-visible { outline: 2px solid var(--series-start); outline-offset: -2px; }
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  min-width: 150px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 3px;
+}
+.chart-tooltip strong { color: var(--text-primary); font-size: 0.84rem; }
+.chart-tooltip .tip-row { display: flex; align-items: center; gap: 6px; }
+.chart-tooltip .tip-row b {
+  margin-left: auto;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.chart-tooltip .tip-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.chart-tooltip .tip-gap {
+  margin-top: 3px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------- pay flow -- */
+
+.chart-flow { margin-top: 10px; }
+
+/* Label sitting inside a coloured node — sized by luminance-safe surface ink. */
+.flow-inline {
+  font-size: 12px;
+  font-weight: 620;
+  font-family: var(--font);
+}
+
+.flow-readout {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+@media (min-width: 560px) {
+  .flow-readout { grid-template-columns: 1fr 1fr; gap: 24px; }
+}
+
+.flow-group-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.flow-list { list-style: none; margin: 0; padding: 0; }
+
+.flow-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: baseline;
+  column-gap: 9px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.86rem;
+}
+.flow-item:last-child { border-bottom: none; }
+
+.flow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  align-self: center;
+}
+
+.flow-name { color: var(--text-secondary); }
+
+.flow-year {
+  font-weight: 620;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.flow-month {
+  grid-column: 3;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A zero line still earns its place — "no federal tax at this income" is the
+   single most surprising thing on the page for a teenager. */
+.flow-item.is-zero .flow-name,
+.flow-item.is-zero .flow-year { color: var(--text-muted); font-weight: 500; }
+.flow-item.is-zero .flow-dot { opacity: 0.35; }
+
+.flow-item.is-negative .flow-year { color: var(--status-critical); }
+
+/* ------------------------------------------------------------ table view -- */
+
+.table-view { margin-top: 16px; }
+.table-view > summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  list-style: none;
+}
+.table-view > summary::-webkit-details-marker { display: none; }
+.table-view > summary::before { content: "▸ "; color: var(--text-muted); }
+.table-view[open] > summary::before { content: "▾ "; }
+
+.table-scroll { overflow-x: auto; margin-top: 12px; }
+
+.table-view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  font-variant-numeric: tabular-nums;
+}
+.table-view caption {
+  text-align: left;
+  padding-bottom: 8px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.table-view th, .table-view td {
+  padding: 7px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table-view thead th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom-color: var(--axis);
+}
+.table-view tbody th, .table-view th:first-child, .table-view td:first-child { text-align: left; }
+.table-view tbody th { font-weight: 550; }
+.table-view tr.is-total th, .table-view tr.is-total td {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+/* ----------------------------------------------------------------- notes -- */
+
+.card-notes { background: var(--surface-page); box-shadow: none; }
+
+.notes {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+.notes li { margin-bottom: 5px; }
+.notes strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+.disclaimer {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.79rem;
+  color: var(--text-muted);
+}
+
+/* -------------------------------------------------------- sticky summary -- */
+
+.sticky-summary {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translate(-50%, calc(100% + 32px));
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+  transition: transform 0.22s ease;
+  z-index: 40;
+  max-width: calc(100vw - 32px);
+  white-space: nowrap;
+  /* Never let the floating pill swallow a click meant for a chart beneath it. */
+  pointer-events: none;
+}
+.sticky-summary.is-visible { transform: translate(-50%, 0); }
+
+/* Once there is room, tuck it into the corner so it stops sitting on top of
+   whatever chart happens to be mid-viewport. */
+@media (min-width: 700px) {
+  .sticky-summary { left: auto; right: 20px; transform: translate(0, calc(100% + 32px)); }
+  .sticky-summary.is-visible { transform: translate(0, 0); }
+}
+
+.sticky-label { font-size: 0.8rem; color: var(--text-secondary); }
+.sticky-value {
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--series-start);
+  white-space: nowrap;
+}

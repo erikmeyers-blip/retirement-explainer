@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retirement explainer</title>
+<meta name="description" content="See what starting a Roth IRA five years earlier is really worth, using real Minnesota take-home pay math.">
+<!-- Shared by link with family rather than published broadly — keep it out of
+     search results. Delete this line to make it publicly discoverable. -->
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+</head>
+<body>
+
+<a class="skip-link" href="#result">Skip to the result</a>
+
+<header class="page-header">
+  <h1>Retirement explainer</h1>
+  <p class="lede">
+    Move the sliders to match a job you have — or one you want. The chart shows
+    what happens if you start putting money away <strong>now</strong> versus
+    waiting just <strong>five years</strong>. Same job, same paycheck, same
+    habits. Only the start date changes.
+  </p>
+</header>
+
+<main class="layout">
+
+  <!-- ================= CONTROLS ================= -->
+  <div class="controls">
+
+    <section class="card" aria-labelledby="step1">
+      <h2 class="step" id="step1"><span class="step-num">1</span> Pick a starting point</h2>
+      <div class="preset-grid" role="group" aria-label="Preset scenarios">
+        <button type="button" class="preset" data-preset="teen" aria-pressed="true">
+          <span class="preset-title">Part-time teen job</span>
+          <span class="preset-hint">Age 16 · $13/hr · 15 hrs a week</span>
+        </button>
+        <button type="button" class="preset" data-preset="career" aria-pressed="false">
+          <span class="preset-title">Full-time career</span>
+          <span class="preset-hint">Age 22 · $22/hr · 40 hrs a week</span>
+        </button>
+      </div>
+      <p class="hint">Everything below stays editable — change whatever you like.</p>
+    </section>
+
+    <section class="card" aria-labelledby="step2">
+      <h2 class="step" id="step2"><span class="step-num">2</span> Your job</h2>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="age">How old are you?</label>
+          <output class="field-value" id="age-out" for="age">16</output>
+        </div>
+        <input type="range" id="age" min="14" max="40" step="1" value="16">
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="wage">Hourly pay</label>
+          <output class="field-value" id="wage-out" for="wage">$13.00</output>
+        </div>
+        <input type="range" id="wage" min="7.25" max="50" step="0.25" value="13">
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="hours">Hours a week</label>
+          <output class="field-value" id="hours-out" for="hours">15</output>
+        </div>
+        <input type="range" id="hours" min="0" max="60" step="1" value="15">
+      </div>
+
+      <p class="callout" id="pay-summary">
+        That's <strong>$10,140</strong> a year before taxes —
+        <strong>$9,364</strong> after.
+      </p>
+    </section>
+
+    <section class="card" aria-labelledby="step3">
+      <h2 class="step" id="step3"><span class="step-num">3</span> Where your money goes</h2>
+      <p class="hint">
+        Each slider is a slice of your take-home pay. The small tick
+        <span class="tick-key" aria-hidden="true"></span> marks a commonly
+        recommended amount — it's a guide, not a rule.
+      </p>
+
+      <!-- Roth IRA gets top billing: it is the point of the tool. -->
+      <div class="field field-feature" data-alloc="rothIRA">
+        <div class="field-head">
+          <label for="rothIRA">
+            <span class="swatch" style="background:var(--series-1)" aria-hidden="true"></span>
+            Roth IRA <span class="field-note">(retirement)</span>
+          </label>
+          <output class="field-value" id="rothIRA-out" for="rothIRA">15% · $1,405/yr</output>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="rothIRA" min="0" max="50" step="0.5" value="15">
+        </div>
+        <div class="field-foot">
+          <span class="rec" id="rothIRA-rec">Recommended: 15%</span>
+          <button type="button" class="link-btn" id="roth-mode-toggle"
+                  aria-pressed="false">Use dollars instead</button>
+        </div>
+        <div class="flat-input" id="roth-flat-wrap" hidden>
+          <label for="rothFlat">Dollars per year</label>
+          <input type="number" id="rothFlat" min="0" max="7500" step="50" value="1000"
+                 inputmode="decimal">
+          <span class="hint" id="roth-flat-note"></span>
+        </div>
+        <p class="notice" id="roth-cap-notice" hidden></p>
+      </div>
+
+      <div class="field" data-alloc="savings">
+        <div class="field-head">
+          <label for="savings">
+            <span class="swatch" style="background:var(--series-2)" aria-hidden="true"></span>
+            Emergency savings
+          </label>
+          <output class="field-value" id="savings-out" for="savings">15% · $1,405/yr</output>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="savings" min="0" max="50" step="0.5" value="15">
+        </div>
+        <div class="field-foot"><span class="rec" id="savings-rec">Recommended: 10-15%</span></div>
+      </div>
+
+      <div class="field" data-alloc="housing">
+        <div class="field-head">
+          <label for="housing">
+            <span class="swatch" style="background:var(--series-3)" aria-hidden="true"></span>
+            Housing <span class="field-note">(rent, utilities)</span>
+          </label>
+          <output class="field-value" id="housing-out" for="housing">0% · $0/yr</output>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="housing" min="0" max="70" step="0.5" value="0">
+        </div>
+        <div class="field-foot"><span class="rec" id="housing-rec">Recommended: 30% or less</span></div>
+      </div>
+
+      <div class="field" data-alloc="groceries">
+        <div class="field-head">
+          <label for="groceries">
+            <span class="swatch" style="background:var(--series-4)" aria-hidden="true"></span>
+            Groceries
+          </label>
+          <output class="field-value" id="groceries-out" for="groceries">5% · $468/yr</output>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="groceries" min="0" max="40" step="0.5" value="5">
+        </div>
+        <div class="field-foot"><span class="rec" id="groceries-rec">Recommended: 10-12%</span></div>
+      </div>
+
+      <div class="field" data-alloc="charity">
+        <div class="field-head">
+          <label for="charity">
+            <span class="swatch" style="background:var(--series-5)" aria-hidden="true"></span>
+            Charity / giving
+          </label>
+          <output class="field-value" id="charity-out" for="charity">10% · $936/yr</output>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="charity" min="0" max="50" step="0.5" value="10">
+        </div>
+        <div class="field-foot"><span class="rec" id="charity-rec">Recommended: 10%</span></div>
+      </div>
+
+      <div class="fun-money" id="fun-money">
+        <div class="fun-head">
+          <span class="swatch" style="background:var(--series-6)" aria-hidden="true"></span>
+          <span>Fun money — whatever's left</span>
+        </div>
+        <output class="fun-value" id="fun-out">$5,150<span class="per">/yr</span></output>
+        <p class="fun-sub" id="fun-sub">That's about $429 a month to spend however you want.</p>
+      </div>
+
+      <details class="fine-tune">
+        <summary>Fine-tune the assumptions</summary>
+        <div class="field">
+          <div class="field-head">
+            <label for="growth">Raises above inflation, per year</label>
+            <output class="field-value" id="growth-out" for="growth">2.0%</output>
+          </div>
+          <input type="range" id="growth" min="0" max="6" step="0.25" value="2">
+          <p class="hint">
+            A "real" raise — one that actually beats rising prices. Your pay
+            stops climbing once it hits $50/hr.
+          </p>
+        </div>
+        <button type="button" class="reset-btn" id="reset">Reset everything</button>
+      </details>
+    </section>
+  </div>
+
+  <!-- ================= RESULTS ================= -->
+  <div class="results" id="result">
+
+    <section class="card card-hero" aria-labelledby="hero-title">
+      <h2 class="card-title" id="hero-title">If you start now instead of waiting 5 years</h2>
+
+      <p class="hero-figure" id="hero-gap">$188,431</p>
+      <p class="hero-sub" id="hero-sub">
+        more in your retirement account by age 67 — about 188 thousand dollars,
+        in today's money.
+      </p>
+
+      <div class="stat-row">
+        <div class="stat">
+          <span class="stat-label">Extra you actually put in</span>
+          <span class="stat-value" id="stat-extra">$7,310</span>
+          <span class="stat-note">over those 5 years</span>
+        </div>
+        <div class="stat stat-accent">
+          <span class="stat-label">What each of those dollars became</span>
+          <span class="stat-value" id="stat-multiple">25.8x</span>
+          <span class="stat-note">by the time you retire</span>
+        </div>
+      </div>
+
+      <p class="insight" id="insight">
+        You only put in <strong>$7,310</strong> more — but you end up with
+        <strong>$188,431</strong> more. That difference isn't your money. It's
+        time doing the work.
+      </p>
+    </section>
+
+    <section class="card" aria-labelledby="chart-title">
+      <h2 class="card-title" id="chart-title">Your Roth IRA at every retirement age</h2>
+      <div class="legend">
+        <span class="legend-item">
+          <i class="legend-swatch" style="background:var(--series-start)"></i>Start now
+        </span>
+        <span class="legend-item">
+          <i class="legend-swatch" style="background:var(--series-wait)"></i>Wait 5 years
+        </span>
+      </div>
+      <div class="chart" id="comparison-chart"></div>
+      <details class="table-view">
+        <summary>See these numbers as a table</summary>
+        <div class="table-scroll">
+          <table>
+            <caption>Roth IRA balance in today's dollars</caption>
+            <thead>
+              <tr><th scope="col">Age</th><th scope="col">Start now</th>
+                  <th scope="col">Wait 5 years</th><th scope="col">Difference</th></tr>
+            </thead>
+            <tbody id="comparison-table"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="flow-title">
+      <h2 class="card-title" id="flow-title">Where a year of pay actually goes</h2>
+      <p class="card-sub">
+        Follow the money downward. Taxes come out first — you never see that in
+        your account — and the rest splits into everything below.
+      </p>
+      <div class="chart chart-flow" id="payflow-chart"></div>
+      <p class="notice" id="flow-note" data-tone="critical" hidden></p>
+      <div class="flow-readout" id="payflow-list"></div>
+    </section>
+
+    <section class="card card-notes" aria-labelledby="notes-title">
+      <h2 class="card-title" id="notes-title">What's behind the math</h2>
+      <ul class="notes" id="assumption-notes"></ul>
+      <p class="disclaimer">
+        This is a teaching tool, not financial advice. It's built to show one
+        idea clearly — that time matters more than amount — so it deliberately
+        leaves out 401(k) matches, Social Security, and a lot of real life.
+      </p>
+    </section>
+  </div>
+</main>
+
+<!-- Live summary for small screens, so the headline number is always visible
+     while the sliders are being moved. -->
+<div class="sticky-summary" id="sticky-summary" aria-hidden="true">
+  <span class="sticky-label">Starting now is worth</span>
+  <span class="sticky-value" id="sticky-value">$188,431</span>
+</div>
+
+<script type="module" src="js/ui.js"></script>
+</body>
+</html>
