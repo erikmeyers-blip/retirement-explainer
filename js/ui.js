@@ -216,13 +216,56 @@ function render() {
     drawPayFlow(flow);
   }
   renderPayFlowList($('payflow-list'), flow);
+
+  // Regenerated every render: the wage-growth note reports live settings.
+  renderAssumptionNotes(result);
 }
 
 /* --------------------------------------------------------------------- *
  * Assumption notes — generated from the constants so they can never drift
  * --------------------------------------------------------------------- */
 
-function renderAssumptionNotes() {
+/**
+ * The wage-growth note has to be built from live state, not hardcoded: the
+ * growth rate is an editable slider, and what raises do to your contribution
+ * depends on whether you set the Roth as a percentage or a flat amount.
+ */
+function wageGrowthNote(result) {
+  const rows = result.projection.startNow;
+  if (!rows.length) return '';
+
+  const nowMonthly = money(rows[0].contribution / 12);
+  const isFlat = state.allocations.rothMode === 'flat';
+
+  if (state.wageGrowth <= 0) {
+    return `You've set raises to <strong>0% above inflation</strong>, so your pay ` +
+      `stays flat in today's money and your contribution stays at ` +
+      `<strong>${nowMonthly} a month</strong> the whole way.`;
+  }
+
+  const opening =
+    `Your pay is assumed to rise <strong>${percent(state.wageGrowth, 1)} a year ` +
+    `above inflation</strong>, until it reaches the <strong>$${A.hourlyRateCap}/hr</strong> ceiling. `;
+
+  if (isFlat) {
+    return opening +
+      `You've set a fixed dollar amount, so raises don't change what goes into the ` +
+      `Roth IRA — it stays <strong>${nowMonthly} a month</strong> no matter how much you earn.`;
+  }
+
+  const laterAge = Math.min(state.currentAge + 20, rows[rows.length - 1].age);
+  const later = rows.find((r) => r.age === laterAge) || rows[rows.length - 1];
+  const atCap = later.contribution >= A.rothIRALimit - 0.5;
+
+  return opening +
+    `Your Roth contribution is a <em>share</em> of your take-home pay rather than a ` +
+    `fixed amount, so the percentage stays put but the dollars climb as your pay does — ` +
+    `about <strong>${nowMonthly} a month</strong> now, and ` +
+    `<strong>${money(later.contribution / 12)} a month</strong> by age ${laterAge}` +
+    (atCap ? `, where it runs into the ${money(A.rothIRALimit)} yearly cap.` : `.`);
+}
+
+function renderAssumptionNotes(result) {
   const fedTop = A.federalBrackets[0];
   const mnTop = A.mnBrackets[0];
 
@@ -240,13 +283,15 @@ function renderAssumptionNotes() {
     `Money grows at <strong>${percent(A.realReturnRate)} a year after inflation</strong>. ` +
       `That's why the totals look reasonable instead of enormous — every number is ` +
       `in <em>today's</em> dollars, so you can picture what it actually buys.`,
-    `Contributions are counted at the <em>end</em> of each year, and pay stops ` +
-      `growing once it reaches <strong>$${A.hourlyRateCap}/hr</strong>.`,
+    wageGrowthNote(result),
+    `Contributions are counted at the <em>end</em> of each year, so a year's own ` +
+      `contribution doesn't earn a return until the year after.`,
     `Both people in the comparison earn exactly the same money. The only ` +
       `difference is that one starts contributing <strong>${A.delayYears} years</strong> later.`,
   ];
 
-  $('assumption-notes').innerHTML = notes.map((n) => `<li>${n}</li>`).join('');
+  $('assumption-notes').innerHTML =
+    notes.filter(Boolean).map((n) => `<li>${n}</li>`).join('');
 }
 
 /* --------------------------------------------------------------------- *
@@ -321,7 +366,6 @@ $('hours').max = String(A.hoursPerWeekCap);
 $('growth').max = String(A.wageGrowthCap * 100);
 
 placeRecommendationMarkers();
-renderAssumptionNotes();
 wireEvents();
 stateToControls();
 render();
