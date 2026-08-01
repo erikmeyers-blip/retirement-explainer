@@ -283,6 +283,10 @@ function renderAssumptionNotes(result) {
     `Money grows at <strong>${percent(A.realReturnRate)} a year after inflation</strong>. ` +
       `That's why the totals look reasonable instead of enormous — every number is ` +
       `in <em>today's</em> dollars, so you can picture what it actually buys.`,
+    `Real investments don't grow in a straight line. A year that drops 30% and a year ` +
+      `that gains 25% both average out to something like this over decades — so treat ` +
+      `these as a <em>reasonable middle</em>, not a promise. The lesson holds either ` +
+      `way: at half this growth rate, starting early still wins by a mile.`,
     wageGrowthNote(result),
     `Contributions are counted at the <em>end</em> of each year, so a year's own ` +
       `contribution doesn't earn a return until the year after.`,
