@@ -110,24 +110,23 @@ function bindTip(node, tooltip, render) {
  */
 function responsive(container, draw) {
   let latest = null;
-  let width = 0;
+  let lastPainted = 0;
 
+  // Always measure at paint time rather than trusting a cached width. If a
+  // resize notification is ever missed, the next render — moving any slider —
+  // corrects the scale instead of redrawing at a stale size and staying wrong.
   const paint = () => {
+    const width = Math.round(container.getBoundingClientRect().width);
     if (latest === null || width === 0) return;
+    lastPainted = width;
     const svg = container.querySelector('svg');
     if (svg) svg.remove();
     container.insertBefore(draw(latest, width), container.firstChild);
   };
 
-  const ro = new ResizeObserver((entries) => {
-    const next = Math.round(entries[0].contentRect.width);
-    if (next !== width) {
-      width = next;
-      paint();
-    }
-  });
-  ro.observe(container);
-  width = Math.round(container.getBoundingClientRect().width);
+  new ResizeObserver(() => {
+    if (Math.round(container.getBoundingClientRect().width) !== lastPainted) paint();
+  }).observe(container);
 
   return (data) => {
     latest = data;
