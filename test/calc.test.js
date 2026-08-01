@@ -170,6 +170,69 @@ test('flat-dollar Roth mode is honoured and still capped', () => {
   assert.equal(over.rothCappedByLimit, true);
 });
 
+test('no reachable input can push a contribution past the annual limit', () => {
+  // A property test rather than a spot check: the cap is the one guarantee this
+  // tool makes about a legal limit, so sweep the whole input domain instead of
+  // trusting that every future caller remembers to clamp.
+  const LIMIT = ASSUMPTIONS_2026.rothIRALimit;
+  let checks = 0;
+  let worst = 0;
+
+  for (let wage = 7.25; wage <= ASSUMPTIONS_2026.hourlyRateCap; wage += 1.5) {
+    for (let hours = 0; hours <= ASSUMPTIONS_2026.hoursPerWeekCap; hours += 10) {
+      const pay = computePay({ hourlyWage: wage, hoursPerWeek: hours });
+      const cases = [
+        { rothMode: 'percent', rothPercent: 0.5, rothFlat: 0 },
+        { rothMode: 'percent', rothPercent: 1.0, rothFlat: 0 },
+        { rothMode: 'flat', rothPercent: 0, rothFlat: LIMIT + 1 },
+        { rothMode: 'flat', rothPercent: 0, rothFlat: 999_999 },
+      ];
+      for (const c of cases) {
+        const split = computeAllocations(pay.net, { ...baseAlloc, ...c });
+        checks++;
+        worst = Math.max(worst, split.rothIRA);
+        assert.ok(split.rothIRA <= LIMIT + 1e-9,
+          `contributed ${split.rothIRA} at $${wage}/hr x ${hours}h (${c.rothMode})`);
+        // The second ceiling: you cannot contribute money you never took home.
+        assert.ok(split.rothIRA <= pay.net + 1e-9,
+          `contributed ${split.rothIRA} against net ${pay.net}`);
+      }
+    }
+  }
+
+  assert.ok(checks > 200, 'sweep did not actually run');
+  assert.equal(Math.round(worst), LIMIT, 'the cap should be reachable, not just respected');
+});
+
+test('the cap holds in every year of a full projection, not just year one', () => {
+  // Wage growth raises net pay every year, so the clamp has to be re-applied
+  // annually — a cap checked only at the current age would leak later.
+  const LIMIT = ASSUMPTIONS_2026.rothIRALimit;
+  let years = 0;
+
+  for (const growth of [0, 0.02, 0.06]) {
+    for (const wage of [7.25, 22, 50]) {
+      const rows = projectRothBalance(
+        {
+          currentAge: 16,
+          hourlyWage: wage,
+          hoursPerWeek: 60,
+          wageGrowth: growth,
+          allocations: { ...baseAlloc, rothMode: 'percent', rothPercent: 0.5 },
+        },
+        16,
+      );
+      for (const row of rows) {
+        years++;
+        assert.ok(row.contribution <= LIMIT + 1e-9,
+          `year at age ${row.age} contributed ${row.contribution} (growth ${growth})`);
+      }
+    }
+  }
+
+  assert.ok(years > 100, 'projection sweep did not actually run');
+});
+
 test('Roth contribution can never exceed take-home pay', () => {
   const split = computeAllocations(1200, { ...baseAlloc, rothMode: 'flat', rothFlat: 5000 });
   near(split.rothIRA, 1200);
