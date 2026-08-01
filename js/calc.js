@@ -102,7 +102,9 @@ export const PRESETS = {
       groceries: 0.05,
       rothMode: 'percent',
       rothPercent: 0.15,
-      rothFlat: 1000,
+      // Divisible by 12: the UI sets this in dollars per month, so a value that
+      // doesn't divide evenly would drift by a few dollars on every round-trip.
+      rothFlat: 1200,
     },
   },
   career: {

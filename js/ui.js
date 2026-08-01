@@ -56,7 +56,8 @@ function stateToControls() {
     $(key).value = (value * 100).toFixed(1);
   }
 
-  $('rothFlat').value = Math.round(state.allocations.rothFlat);
+  // The engine works in dollars per year; this control is dollars per month.
+  $('rothFlat').value = Math.round(state.allocations.rothFlat / 12);
   setRothMode(state.allocations.rothMode, { silent: true });
 }
 
@@ -73,7 +74,7 @@ function controlsToState() {
     else state.allocations[key] = fraction;
   }
 
-  state.allocations.rothFlat = Number($('rothFlat').value) || 0;
+  state.allocations.rothFlat = (Number($('rothFlat').value) || 0) * 12;
 }
 
 /* --------------------------------------------------------------------- *
@@ -130,17 +131,19 @@ function render() {
 
   $('pay-summary').innerHTML = pay.gross > 0
     ? `That's <strong>${money(pay.gross)}</strong> a year before taxes — ` +
-      `<strong>${money(pay.net)}</strong> after. ` +
+      `<strong>${money(pay.net)}</strong> after, or about ` +
+      `<strong>${money(pay.net / 12)}</strong> a month to work with. ` +
       (pay.federalTax === 0 && pay.stateTax === 0
         ? `At this income you owe <strong>no income tax at all</strong> — just Social Security and Medicare.`
         : `Taxes take <strong>${percent(pay.effectiveTaxRate, 1)}</strong>.`)
     : `Set your hours above zero to see your pay.`;
 
-  /* --- Step 3 readouts --- */
+  /* --- Step 3 readouts --- monthly, because that is how a budget is lived */
   for (const key of ALLOC_SLIDERS) {
     const dollars = allocations[key];
     const share = pay.net > 0 ? dollars / pay.net : 0;
-    $(`${key}-out`).textContent = `${percent(share, share < 0.1 && share > 0 ? 1 : 0)} · ${money(dollars)}/yr`;
+    $(`${key}-out`).textContent =
+      `${percent(share, share < 0.1 && share > 0 ? 1 : 0)} · ${money(dollars / 12)}/mo`;
   }
 
   // Roth cap explanations — say which ceiling was hit, in plain words.
@@ -150,27 +153,30 @@ function render() {
     capNotice.removeAttribute('data-tone');
     capNotice.textContent =
       `The most anyone under 50 can put into a Roth IRA in 2026 is ` +
-      `${money(A.rothIRALimit)} a year, so that's what we used.`;
+      `${money(A.rothIRALimit / 12)} a month — ${money(A.rothIRALimit)} a year — ` +
+      `so that's what we used.`;
   } else if (allocations.rothCappedByNet) {
     capNotice.hidden = false;
     capNotice.setAttribute('data-tone', 'critical');
     capNotice.textContent =
-      `You can't contribute more than you take home. Capped at ${money(pay.net)}.`;
+      `You can't contribute more than you take home. Capped at ${money(pay.net / 12)} a month.`;
   } else {
     capNotice.hidden = true;
   }
 
+  // Both units, because the $7,500 annual cap is the figure worth remembering
+  // even though this control is set in months.
   $('roth-flat-note').textContent =
-    `Up to ${money(A.rothIRALimit)} — the 2026 limit.`;
+    `Up to ${money(A.rothIRALimit / 12)}/mo — that's the ${money(A.rothIRALimit)} yearly limit.`;
 
   /* --- Fun money --- */
   const funEl = $('fun-money');
   funEl.classList.toggle('is-negative', allocations.overAllocated);
-  $('fun-out').innerHTML = `${money(allocations.funMoney)}<span class="per">/yr</span>`;
+  $('fun-out').innerHTML = `${money(allocations.funMoney / 12)}<span class="per">/mo</span>`;
   $('fun-sub').textContent = allocations.overAllocated
     ? `You've assigned more than you earn — pull a slider back by ` +
-      `${money(-allocations.funMoney)} a year.`
-    : `That's about ${money(allocations.funMoney / 12)} a month to spend however you want.`;
+      `${money(-allocations.funMoney / 12)} a month.`
+    : `That adds up to ${money(allocations.funMoney)} over a year.`;
 
   /* --- Hero --- */
   const h = projection.headline;
@@ -307,7 +313,7 @@ function wireEvents() {
  * Boot
  * --------------------------------------------------------------------- */
 
-$('rothFlat').max = String(A.rothIRALimit);
+$('rothFlat').max = String(Math.round(A.rothIRALimit / 12));
 $('age').min = String(A.minAge);
 $('age').max = String(A.maxAge);
 $('wage').max = String(A.hourlyRateCap);

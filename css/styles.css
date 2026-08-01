@@ -275,7 +275,13 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
+  /* Let the parenthetical drop to its own line when space runs out, rather
+     than the category name itself breaking apart ("Roth" / "IRA"). */
+  flex-wrap: wrap;
+  row-gap: 0;
 }
+
+.field-name { white-space: nowrap; }
 
 .field-note { color: var(--text-muted); font-weight: 400; font-size: 0.82rem; }
 
